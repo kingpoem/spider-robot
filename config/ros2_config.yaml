@@ -1,0 +1,27 @@
+# ROS2配置文件
+
+slam:
+  map_update_rate: 5.0  # Hz
+  map_resolution: 0.05  # m/pixel
+  map_width: 400  # pixels
+  map_height: 400  # pixels
+
+navigation:
+  planner_frequency: 1.0  # Hz
+  controller_frequency: 10.0  # Hz
+  max_linear_vel: 0.3  # m/s
+  max_angular_vel: 1.0  # rad/s
+
+gait_planner:
+  gait_frequency: 10.0  # Hz
+  max_linear_vel: 0.3  # m/s
+  max_angular_vel: 1.0  # rad/s
+  min_step_length: 0.1  # m
+  max_step_length: 0.3  # m
+  min_step_height: 0.05  # m
+  max_step_height: 0.2  # m
+
+terrain_adaptation:
+  analysis_radius: 0.5  # m
+  min_points: 10
+

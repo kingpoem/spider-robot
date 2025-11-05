@@ -1,0 +1,30 @@
+# Arduino配置文件示例
+
+hardware:
+  num_legs: 6
+  joints_per_leg: 3
+  
+servo:
+  min_pulse: 500
+  max_pulse: 2500
+  default_position: 90
+  
+imu:
+  type: "MPU6050"  # 或 "BNO085"
+  update_rate: 100  # Hz
+  
+force_sensors:
+  contact_threshold: 10.0  # N
+  calibration: true
+  
+gait:
+  min_step_length: 0.1  # m
+  max_step_length: 0.3  # m
+  min_step_height: 0.05  # m
+  max_step_height: 0.2  # m
+  
+control:
+  frequency: 100  # Hz
+  posture_kp: 0.5
+  posture_leg_kp: 0.3
+
