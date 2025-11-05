@@ -10,8 +10,12 @@
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <memory>
 #include <vector>
+#include <algorithm>
+#include <cmath>
 
 class SLAMNode : public rclcpp::Node
 {
@@ -83,27 +87,32 @@ private:
     {
         if (!lidar_data_) return;
         
-        // 简单的SLAM实现
-        // 实际应用中应使用slam_toolbox或cartographer
+        float robot_x = current_pose_.pose.pose.position.x;
+        float robot_y = current_pose_.pose.pose.position.y;
         
-        // 将激光扫描数据转换为地图占用
-        float angle = lidar_data_->angle_min;
+        tf2::Quaternion q(
+            current_pose_.pose.pose.orientation.x,
+            current_pose_.pose.pose.orientation.y,
+            current_pose_.pose.pose.orientation.z,
+            current_pose_.pose.pose.orientation.w);
+        tf2::Matrix3x3 m(q);
+        double roll, pitch, yaw;
+        m.getRPY(roll, pitch, yaw);
+        
+        float angle = lidar_data_->angle_min + yaw;
         for (size_t i = 0; i < lidar_data_->ranges.size(); ++i) {
             float range = lidar_data_->ranges[i];
             
             if (range > lidar_data_->range_min && range < lidar_data_->range_max) {
-                // 计算障碍物位置
-                float x = range * cos(angle);
-                float y = range * sin(angle);
+                float obs_x = robot_x + range * cos(angle);
+                float obs_y = robot_y + range * sin(angle);
                 
-                // 更新地图
-                updateMapCell(x, y, 100);  // 占用
+                updateMapCell(obs_x, obs_y, 100);
                 
-                // 更新路径（占用到传感器之间为空闲）
-                for (float r = 0; r < range; r += map_.info.resolution) {
-                    float px = r * cos(angle);
-                    float py = r * sin(angle);
-                    updateMapCell(px, py, 0);  // 空闲
+                for (float r = 0.1; r < range - 0.1; r += map_.info.resolution) {
+                    float px = robot_x + r * cos(angle);
+                    float py = robot_y + r * sin(angle);
+                    updateMapCell(px, py, 0);
                 }
             }
             
@@ -113,20 +122,65 @@ private:
     
     void processDepthData()
     {
-        // 处理深度摄像头点云数据
-        // 这里可以添加点云处理逻辑
+        if (!depth_data_) return;
+        
+        const uint8_t* data_ptr = depth_data_->data.data();
+        int point_step = depth_data_->point_step;
+        int row_step = depth_data_->row_step;
+        
+        for (uint32_t y = 0; y < depth_data_->height; y += 4) {
+            for (uint32_t x = 0; x < depth_data_->width; x += 4) {
+                const uint8_t* point_ptr = data_ptr + y * row_step + x * point_step;
+                
+                float point_x = *reinterpret_cast<const float*>(point_ptr);
+                float point_y = *reinterpret_cast<const float*>(point_ptr + 4);
+                float point_z = *reinterpret_cast<const float*>(point_ptr + 8);
+                
+                if (std::isfinite(point_x) && std::isfinite(point_y) && std::isfinite(point_z)) {
+                    if (point_z > 0.1 && point_z < 5.0) {
+                        updateMapCell(point_x, point_y, 100);
+                        
+                        float robot_x = current_pose_.pose.pose.position.x;
+                        float robot_y = current_pose_.pose.pose.position.y;
+                        
+                        float dx = point_x - robot_x;
+                        float dy = point_y - robot_y;
+                        float dist = sqrt(dx*dx + dy*dy);
+                        
+                        int steps = static_cast<int>(dist / map_.info.resolution);
+                        for (int i = 0; i < steps; ++i) {
+                            float px = robot_x + (dx * i / steps);
+                            float py = robot_y + (dy * i / steps);
+                            updateMapCell(px, py, 0);
+                        }
+                    }
+                }
+            }
+        }
     }
     
     void updateMapCell(float x, float y, int8_t value)
     {
-        // 将世界坐标转换为地图坐标
         int map_x = static_cast<int>((x - map_.info.origin.position.x) / map_.info.resolution);
         int map_y = static_cast<int>((y - map_.info.origin.position.y) / map_.info.resolution);
         
         if (map_x >= 0 && map_x < static_cast<int>(map_.info.width) &&
             map_y >= 0 && map_y < static_cast<int>(map_.info.height)) {
             int index = map_y * map_.info.width + map_x;
-            map_.data[index] = value;
+            
+            if (value == 0) {
+                if (map_.data[index] == -1) {
+                    map_.data[index] = 0;
+                } else if (map_.data[index] < 100) {
+                    map_.data[index] = std::max(0, map_.data[index] - 1);
+                }
+            } else if (value == 100) {
+                if (map_.data[index] == -1) {
+                    map_.data[index] = 100;
+                } else if (map_.data[index] < 100) {
+                    map_.data[index] = std::min(100, map_.data[index] + 10);
+                }
+            }
         }
     }
     

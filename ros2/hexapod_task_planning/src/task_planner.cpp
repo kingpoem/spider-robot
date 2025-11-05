@@ -58,36 +58,87 @@ private:
     void planHarvestTask()
     {
         RCLCPP_INFO(this->get_logger(), "规划采摘任务");
-        // 获取需要采摘的作物位置
-        // 规划路径到每个作物位置
-        // 执行采摘动作
         
-        // 示例：发布目标位置
-        auto goal = geometry_msgs::msg::PoseStamped();
-        goal.header.frame_id = "map";
-        goal.header.stamp = this->now();
-        goal.pose.position.x = 5.0;
-        goal.pose.position.y = 3.0;
-        goal.pose.orientation.w = 1.0;
-        goal_pub_->publish(goal);
+        std::vector<std::pair<double, double>> crop_positions = {
+            {5.0, 3.0}, {5.5, 3.5}, {6.0, 3.0}, {6.5, 3.5}
+        };
+        
+        for (const auto& pos : crop_positions) {
+            auto goal = geometry_msgs::msg::PoseStamped();
+            goal.header.frame_id = "map";
+            goal.header.stamp = this->now();
+            goal.pose.position.x = pos.first;
+            goal.pose.position.y = pos.second;
+            goal.pose.orientation.w = 1.0;
+            goal_pub_->publish(goal);
+        }
     }
     
     void planCollectTask()
     {
         RCLCPP_INFO(this->get_logger(), "规划收集任务");
-        // 规划收集路径
+        
+        std::vector<std::pair<double, double>> collection_points = {
+            {3.0, 2.0}, {3.5, 2.5}, {4.0, 2.0}
+        };
+        
+        for (size_t i = 0; i < collection_points.size() - 1; ++i) {
+            for (size_t j = i + 1; j < collection_points.size(); ++j) {
+                double dist1 = sqrt(pow(collection_points[i].first - collection_points[j].first, 2) +
+                                   pow(collection_points[i].second - collection_points[j].second, 2));
+            }
+        }
+        
+        for (const auto& pos : collection_points) {
+            auto goal = geometry_msgs::msg::PoseStamped();
+            goal.header.frame_id = "map";
+            goal.header.stamp = this->now();
+            goal.pose.position.x = pos.first;
+            goal.pose.position.y = pos.second;
+            goal.pose.orientation.w = 1.0;
+            goal_pub_->publish(goal);
+        }
     }
     
     void planMonitorTask()
     {
         RCLCPP_INFO(this->get_logger(), "规划监测任务");
-        // 规划监测路径
+        
+        std::vector<std::pair<double, double>> monitor_points = {
+            {1.0, 1.0}, {1.5, 1.5}, {2.0, 1.0}, {2.5, 1.5}, {3.0, 1.0}
+        };
+        
+        for (const auto& pos : monitor_points) {
+            auto goal = geometry_msgs::msg::PoseStamped();
+            goal.header.frame_id = "map";
+            goal.header.stamp = this->now();
+            goal.pose.position.x = pos.first;
+            goal.pose.position.y = pos.second;
+            goal.pose.orientation.w = 1.0;
+            goal_pub_->publish(goal);
+        }
     }
     
     void planIrrigateTask()
     {
         RCLCPP_INFO(this->get_logger(), "规划灌溉任务");
-        // 规划灌溉路径
+        
+        std::vector<std::pair<double, double>> irrigate_points;
+        for (double x = 4.0; x <= 7.0; x += 0.5) {
+            for (double y = 3.0; y <= 5.0; y += 0.5) {
+                irrigate_points.push_back({x, y});
+            }
+        }
+        
+        for (const auto& pos : irrigate_points) {
+            auto goal = geometry_msgs::msg::PoseStamped();
+            goal.header.frame_id = "map";
+            goal.header.stamp = this->now();
+            goal.pose.position.x = pos.first;
+            goal.pose.position.y = pos.second;
+            goal.pose.orientation.w = 1.0;
+            goal_pub_->publish(goal);
+        }
     }
     
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr task_cmd_sub_;

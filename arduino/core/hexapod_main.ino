@@ -37,6 +37,9 @@ void setup() {
   // 初始化腿部控制器
   initLegs();
   
+  // 设置步态引擎的腿部控制器引用
+  gaitEngine.setLegController(&legController);
+  
   // 初始化FPGA接口
   fpga.init();
   

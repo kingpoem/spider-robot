@@ -58,13 +58,28 @@ projetct1/
 │   ├── hexapod_slam/           # SLAM节点
 │   ├── hexapod_navigation/     # 导航节点
 │   ├── hexapod_task_planning/  # 任务规划节点
-│   └── hexapod_gait_planner/   # 步态规划节点
-│       ├── src/
-│       │   ├── gait_planner.cpp    # 主节点
-│       │   ├── dwa_planner.*       # DWA算法
-│       │   └── terrain_adaptation.* # 地形适应性
-│       └── CMakeLists.txt
-├── fpga/                        # FPGA代码（待实现）
+│   ├── hexapod_gait_planner/   # 步态规划节点
+│   │   ├── src/
+│   │   │   ├── gait_planner.cpp    # 主节点
+│   │   │   ├── dwa_planner.*       # DWA算法
+│   │   │   └── terrain_adaptation.* # 地形适应性
+│   │   └── CMakeLists.txt
+│   ├── hexapod_vision/          # 视觉识别模块
+│   │   ├── src/
+│   │   │   ├── vision_node.cpp      # 视觉处理节点
+│   │   │   └── object_detector.cpp  # 目标检测节点
+│   ├── hexapod_agriculture/     # 农业任务模块
+│   │   ├── src/
+│   │   │   ├── agriculture_node.cpp  # 农业任务协调节点
+│   │   │   ├── harvest_node.cpp      # 采摘任务节点
+│   │   │   ├── monitor_node.cpp      # 监测任务节点
+│   │   │   └── irrigate_node.cpp     # 灌溉任务节点
+│   └── hexapod_perception/      # 环境感知模块
+│       └── src/
+│           └── perception_node.cpp   # 环境感知节点
+├── fpga/                        # FPGA代码
+│   ├── gait_calculator.v        # 步态计算模块
+│   └── README.md                # FPGA说明文档
 ├── config/                      # 配置文件
 │   ├── arduino_config.yaml
 │   └── ros2_config.yaml

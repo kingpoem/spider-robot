@@ -27,8 +27,47 @@ bool IMUSensor::init() {
     return true;
   }
   
-  // 可以添加其他传感器检测
+  uint8_t bno085_addr = 0x4A;
+  Wire.beginTransmission(bno085_addr);
+  if (Wire.endTransmission() == 0) {
+    initBNO085();
+    sensorType = 1;
+    initialized = true;
+    return true;
+  }
+  
+  bno085_addr = 0x4B;
+  Wire.beginTransmission(bno085_addr);
+  if (Wire.endTransmission() == 0) {
+    initBNO085();
+    sensorType = 1;
+    initialized = true;
+    return true;
+  }
+  
   return false;
+}
+
+void IMUSensor::initBNO085() {
+  uint8_t bno085_addr = 0x4A;
+  
+  Wire.beginTransmission(bno085_addr);
+  Wire.write(0x00);
+  Wire.write(0x01);
+  Wire.endTransmission();
+  
+  delay(100);
+  
+  Wire.beginTransmission(bno085_addr);
+  Wire.write(0x00);
+  Wire.write(0x05);
+  Wire.write(0x00);
+  Wire.write(0x00);
+  Wire.write(0xC4);
+  Wire.write(0x1C);
+  Wire.endTransmission();
+  
+  delay(50);
 }
 
 void IMUSensor::initMPU6050() {
@@ -98,8 +137,43 @@ void IMUSensor::readMPU6050() {
 }
 
 void IMUSensor::readBNO085() {
-  // BNO085实现（需要根据具体传感器库实现）
-  // 这里留空，实际使用时需要添加BNO085库
+  static uint8_t bno085_addr = 0x4A;
+  Wire.beginTransmission(bno085_addr);
+  
+  if (Wire.endTransmission() == 0) {
+    uint8_t report_id = 0x05;
+    Wire.beginTransmission(bno085_addr);
+    Wire.write(0x00);
+    Wire.write(report_id);
+    Wire.endTransmission();
+    
+    delay(10);
+    
+    Wire.requestFrom(bno085_addr, 16);
+    if (Wire.available() >= 16) {
+      uint8_t header[4];
+      for (int i = 0; i < 4; i++) {
+        header[i] = Wire.read();
+      }
+      
+      if (header[0] == 0x05) {
+        int16_t quat_i = (Wire.read() << 8) | Wire.read();
+        int16_t quat_x = (Wire.read() << 8) | Wire.read();
+        int16_t quat_y = (Wire.read() << 8) | Wire.read();
+        int16_t quat_z = (Wire.read() << 8) | Wire.read();
+        
+        float quat_scale = 1.0 / (1 << 14);
+        float qw = quat_i * quat_scale;
+        float qx = quat_x * quat_scale;
+        float qy = quat_y * quat_scale;
+        float qz = quat_z * quat_scale;
+        
+        orientation.roll = atan2(2.0 * (qw * qx + qy * qz), 1.0 - 2.0 * (qx * qx + qy * qy)) * 180.0 / PI;
+        orientation.pitch = asin(2.0 * (qw * qy - qz * qx)) * 180.0 / PI;
+        orientation.yaw = atan2(2.0 * (qw * qz + qx * qy), 1.0 - 2.0 * (qy * qy + qz * qz)) * 180.0 / PI;
+      }
+    }
+  }
 }
 
 Orientation IMUSensor::getOrientation() {

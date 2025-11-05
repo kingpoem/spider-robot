@@ -1,4 +1,5 @@
 #include "gait_engine.h"
+#include "../drivers/leg_controller.h"
 #include <math.h>
 
 GaitEngine::GaitEngine() {
@@ -10,10 +11,15 @@ GaitEngine::GaitEngine() {
   currentAdjustment.rollCorrection = 0;
   currentAdjustment.pitchCorrection = 0;
   currentAdjustment.heightAdjustment = 0;
+  
+  legController = nullptr;
 }
 
 void GaitEngine::init() {
-  // 初始化步态参数
+}
+
+void GaitEngine::setLegController(LegController* legCtrl) {
+  legController = legCtrl;
 }
 
 void GaitEngine::applyPostureAdjustment(PostureAdjustment adjustment) {
@@ -29,22 +35,26 @@ void GaitEngine::setGaitParameters(float stepLength, float stepHeight, float spe
 GaitCommands GaitEngine::generateGaitCommands(float phase) {
   GaitCommands commands;
   
-  // 根据当前步态类型生成命令
-  // 这里使用三脚架步态作为示例
-  generateTripodGait(phase, commands);
-  
-  // 应用姿态调整
-  // 这里可以调整目标角度
+  switch (currentGait.currentPhase) {
+    case 0:
+      generateTripodGait(phase, commands);
+      break;
+    case 1:
+      generateWaveGait(phase, commands);
+      break;
+    case 2:
+      generateRippleGait(phase, commands);
+      break;
+    default:
+      generateTripodGait(phase, commands);
+      break;
+  }
   
   return commands;
 }
 
 void GaitEngine::generateTripodGait(float phase, GaitCommands& commands) {
-  // 三脚架步态：三条腿同时抬起，三条腿同时支撑
-  // 腿0, 2, 4 为一组
-  // 腿1, 3, 5 为一组
-  
-  float stepLength = currentGait.stepLength / 10.0;  // 转换为cm
+  float stepLength = currentGait.stepLength / 10.0;
   float stepHeight = currentGait.stepHeight / 10.0;
   
   for (int i = 0; i < NUM_LEGS; i++) {
@@ -52,46 +62,156 @@ void GaitEngine::generateTripodGait(float phase, GaitCommands& commands) {
     float legPhase = phase;
     
     if (!isLiftGroup) {
-      legPhase = fmod(phase + 0.5, 1.0);  // 相位偏移0.5
+      legPhase = fmod(phase + 0.5, 1.0);
     }
     
-    // 计算足端目标位置
     Vector3D targetPos;
     
     if (legPhase < 0.5) {
-      // 支撑阶段
       targetPos.x = -stepLength * (1 - 2 * legPhase);
       targetPos.y = 0;
       targetPos.z = 0;
     } else {
-      // 摆动阶段
       float swingPhase = (legPhase - 0.5) * 2;
       targetPos.x = stepLength * (1 - 2 * swingPhase);
       targetPos.y = 0;
       targetPos.z = stepHeight * sin(PI * swingPhase);
     }
     
-    // 应用姿态调整
     targetPos.z += currentAdjustment.heightAdjustment;
     
-    // 这里应该调用逆运动学计算关节角度
-    // 为简化，这里直接设置角度
-    commands.targetAngles[i][0] = 0;
-    commands.targetAngles[i][1] = 45;
-    commands.targetAngles[i][2] = -45;
+    if (legController != nullptr) {
+      float angles[JOINTS_PER_LEG];
+      if (legController->inverseKinematics(i, targetPos, angles)) {
+        commands.targetAngles[i][0] = angles[0];
+        commands.targetAngles[i][1] = angles[1];
+        commands.targetAngles[i][2] = angles[2];
+      } else {
+        commands.targetAngles[i][0] = 0;
+        commands.targetAngles[i][1] = 45;
+        commands.targetAngles[i][2] = -45;
+      }
+    } else {
+      commands.targetAngles[i][0] = 0;
+      commands.targetAngles[i][1] = 45;
+      commands.targetAngles[i][2] = -45;
+    }
     
-    commands.targetVelocities[i][0] = 0;
-    commands.targetVelocities[i][1] = 0;
-    commands.targetVelocities[i][2] = 0;
+    static float lastAngles[NUM_LEGS][JOINTS_PER_LEG] = {0};
+    float dt = 0.01;
+    commands.targetVelocities[i][0] = (commands.targetAngles[i][0] - lastAngles[i][0]) / dt;
+    commands.targetVelocities[i][1] = (commands.targetAngles[i][1] - lastAngles[i][1]) / dt;
+    commands.targetVelocities[i][2] = (commands.targetAngles[i][2] - lastAngles[i][2]) / dt;
+    
+    lastAngles[i][0] = commands.targetAngles[i][0];
+    lastAngles[i][1] = commands.targetAngles[i][1];
+    lastAngles[i][2] = commands.targetAngles[i][2];
   }
 }
 
 void GaitEngine::generateWaveGait(float phase, GaitCommands& commands) {
-  // 波浪步态实现
-  // 每条腿依次抬起
+  float stepLength = currentGait.stepLength / 10.0;
+  float stepHeight = currentGait.stepHeight / 10.0;
+  float phaseOffset = 1.0 / NUM_LEGS;
+  
+  for (int i = 0; i < NUM_LEGS; i++) {
+    float legPhase = fmod(phase + i * phaseOffset, 1.0);
+    Vector3D targetPos;
+    
+    if (legPhase < 0.5) {
+      targetPos.x = -stepLength * (1 - 2 * legPhase);
+      targetPos.y = 0;
+      targetPos.z = 0;
+    } else {
+      float swingPhase = (legPhase - 0.5) * 2;
+      targetPos.x = stepLength * (1 - 2 * swingPhase);
+      targetPos.y = 0;
+      targetPos.z = stepHeight * sin(PI * swingPhase);
+    }
+    
+    targetPos.z += currentAdjustment.heightAdjustment;
+    
+    if (legController != nullptr) {
+      float angles[JOINTS_PER_LEG];
+      if (legController->inverseKinematics(i, targetPos, angles)) {
+        commands.targetAngles[i][0] = angles[0];
+        commands.targetAngles[i][1] = angles[1];
+        commands.targetAngles[i][2] = angles[2];
+      } else {
+        commands.targetAngles[i][0] = 0;
+        commands.targetAngles[i][1] = 45;
+        commands.targetAngles[i][2] = -45;
+      }
+    } else {
+      commands.targetAngles[i][0] = 0;
+      commands.targetAngles[i][1] = 45;
+      commands.targetAngles[i][2] = -45;
+    }
+    
+    static float lastAngles[NUM_LEGS][JOINTS_PER_LEG] = {0};
+    float dt = 0.01;
+    commands.targetVelocities[i][0] = (commands.targetAngles[i][0] - lastAngles[i][0]) / dt;
+    commands.targetVelocities[i][1] = (commands.targetAngles[i][1] - lastAngles[i][1]) / dt;
+    commands.targetVelocities[i][2] = (commands.targetAngles[i][2] - lastAngles[i][2]) / dt;
+    
+    lastAngles[i][0] = commands.targetAngles[i][0];
+    lastAngles[i][1] = commands.targetAngles[i][1];
+    lastAngles[i][2] = commands.targetAngles[i][2];
+  }
 }
 
 void GaitEngine::generateRippleGait(float phase, GaitCommands& commands) {
-  // 涟漪步态实现
+  float stepLength = currentGait.stepLength / 10.0;
+  float stepHeight = currentGait.stepHeight / 10.0;
+  float groupPhaseOffset = 1.0 / 3.0;
+  
+  for (int i = 0; i < NUM_LEGS; i++) {
+    int group = i % 2;
+    int legInGroup = i / 2;
+    float groupPhase = fmod(phase + group * 0.5, 1.0);
+    float legPhase = fmod(groupPhase + legInGroup * groupPhaseOffset, 1.0);
+    
+    Vector3D targetPos;
+    
+    if (legPhase < 0.5) {
+      targetPos.x = -stepLength * (1 - 2 * legPhase);
+      targetPos.y = 0;
+      targetPos.z = 0;
+    } else {
+      float swingPhase = (legPhase - 0.5) * 2;
+      targetPos.x = stepLength * (1 - 2 * swingPhase);
+      targetPos.y = 0;
+      targetPos.z = stepHeight * sin(PI * swingPhase);
+    }
+    
+    targetPos.z += currentAdjustment.heightAdjustment;
+    
+    if (legController != nullptr) {
+      float angles[JOINTS_PER_LEG];
+      if (legController->inverseKinematics(i, targetPos, angles)) {
+        commands.targetAngles[i][0] = angles[0];
+        commands.targetAngles[i][1] = angles[1];
+        commands.targetAngles[i][2] = angles[2];
+      } else {
+        commands.targetAngles[i][0] = 0;
+        commands.targetAngles[i][1] = 45;
+        commands.targetAngles[i][2] = -45;
+      }
+    } else {
+      commands.targetAngles[i][0] = 0;
+      commands.targetAngles[i][1] = 45;
+      commands.targetAngles[i][2] = -45;
+    }
+    
+    static float lastAngles[NUM_LEGS][JOINTS_PER_LEG] = {0};
+    float dt = 0.01;
+    commands.targetVelocities[i][0] = (commands.targetAngles[i][0] - lastAngles[i][0]) / dt;
+    commands.targetVelocities[i][1] = (commands.targetAngles[i][1] - lastAngles[i][1]) / dt;
+    commands.targetVelocities[i][2] = (commands.targetAngles[i][2] - lastAngles[i][2]) / dt;
+    
+    lastAngles[i][0] = commands.targetAngles[i][0];
+    lastAngles[i][1] = commands.targetAngles[i][1];
+    lastAngles[i][2] = commands.targetAngles[i][2];
+  }
 }
 
