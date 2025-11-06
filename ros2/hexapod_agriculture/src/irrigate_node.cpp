@@ -75,12 +75,13 @@ private:
         
         RCLCPP_INFO(this->get_logger(), "开始灌溉，水流速率: %.2f L/s", flow_rate);
         
-        // 设置定时器停止灌溉
+        // 设置定时器停止灌溺
         double duration = this->get_parameter("irrigation_duration").as_double();
         stop_timer_ = this->create_wall_timer(
             std::chrono::milliseconds(static_cast<int>(duration * 1000)),
-            std::bind(&IrrigateNode::stopIrrigation, this),
-            true);  // 只执行一次
+            std::bind(&IrrigateNode::stopIrrigation, this));
+        stop_timer_->cancel();  // 立即取消，然后重置
+        stop_timer_->reset();  // 重置定时器
     }
     
     void stopIrrigation()

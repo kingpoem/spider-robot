@@ -12,6 +12,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(PCL REQUIRED COMPONENTS common io)
 
 # 添加源文件
 add_executable(gait_planner 
@@ -26,6 +27,8 @@ ament_target_dependencies(gait_planner
   sensor_msgs
   std_msgs
 )
+target_include_directories(gait_planner PUBLIC ${PCL_INCLUDE_DIRS})
+target_link_libraries(gait_planner ${PCL_LIBRARIES})
 
 install(TARGETS gait_planner
   DESTINATION lib/${PROJECT_NAME}

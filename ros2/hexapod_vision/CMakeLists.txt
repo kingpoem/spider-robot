@@ -28,6 +28,7 @@ ament_target_dependencies(vision_node
   cv_bridge
   image_transport
 )
+target_link_libraries(vision_node ${OpenCV_LIBS} curl)
 
 # 添加目标识别节点
 add_executable(object_detector src/object_detector.cpp)
@@ -39,6 +40,7 @@ ament_target_dependencies(object_detector
   cv_bridge
   image_transport
 )
+target_link_libraries(object_detector ${OpenCV_LIBS} curl)
 
 # 安装
 install(TARGETS vision_node object_detector

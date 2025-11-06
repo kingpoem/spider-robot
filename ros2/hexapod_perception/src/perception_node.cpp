@@ -215,8 +215,8 @@ private:
     void perceptionLoop()
     {
         if (current_map_ && current_pose_) {
-            float robot_x = current_pose_->pose.pose.position.x;
-            float robot_y = current_pose_->pose.pose.position.y;
+            float robot_x = current_pose_->pose.position.x;
+            float robot_y = current_pose_->pose.position.y;
             
             int map_x = static_cast<int>((robot_x - current_map_->info.origin.position.x) / current_map_->info.resolution);
             int map_y = static_cast<int>((robot_y - current_map_->info.origin.position.y) / current_map_->info.resolution);

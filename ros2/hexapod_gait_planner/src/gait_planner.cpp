@@ -59,7 +59,7 @@ public:
 private:
     void cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
     {
-        target_velocity_ = *msg;
+        target_velocity_ = msg;
     }
     
     void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
@@ -83,10 +83,10 @@ private:
         // 使用DWA规划步态
         GaitCommand cmd;
         
-        if (current_map_) {
+        if (current_map_ && target_velocity_) {
             // 使用地图进行避障
             cmd = dwa_planner_->plan(target_velocity_, current_map_);
-        } else {
+        } else if (target_velocity_) {
             // 直接使用速度命令
             cmd.linear_velocity = target_velocity_->linear.x;
             cmd.angular_velocity = target_velocity_->angular.z;
