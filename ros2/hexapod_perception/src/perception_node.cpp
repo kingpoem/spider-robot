@@ -9,10 +9,11 @@
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include "hexapod_vision/image_converter.hpp"
 #include <opencv2/opencv.hpp>
 #include <memory>
 #include <vector>
+#include <cstring>
 
 struct TerrainFeature {
     float slope;           // 坡度
@@ -85,12 +86,10 @@ private:
     void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     {
         try {
-            cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(
-                msg, sensor_msgs::image_encodings::BGR8);
-            current_image_ = cv_ptr->image;
+            current_image_ = hexapod_vision::imageToMat(msg);
             analyzeVisualFeatures();
-        } catch (cv_bridge::Exception& e) {
-            RCLCPP_ERROR(this->get_logger(), "cv_bridge异常: %s", e.what());
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "图像处理异常: %s", e.what());
         }
     }
     

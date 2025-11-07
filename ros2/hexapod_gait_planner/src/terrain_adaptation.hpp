@@ -7,9 +7,8 @@
 #define TERRAIN_ADAPTATION_HPP
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 #include <vector>
+#include <array>
 
 struct TerrainScore {
     float slope;        // 坡度 (0-1)
@@ -31,7 +30,7 @@ private:
     void analyzeReachability();
     void calculateSafety();
     
-    pcl::PointCloud<pcl::PointXYZ>::Ptr terrain_cloud_;
+    std::vector<std::array<float, 3>> terrain_points_;
     TerrainScore current_score_;
     
     // 分析参数

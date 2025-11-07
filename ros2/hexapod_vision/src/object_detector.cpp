@@ -7,12 +7,13 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include "hexapod_vision/image_converter.hpp"
 #include <image_transport/image_transport.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn/dnn.hpp>
 #include <memory>
 #include <vector>
+#include <cstring>
 
 struct Detection {
     std::string label;
@@ -92,10 +93,7 @@ private:
     void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
     {
         try {
-            cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(
-                msg, sensor_msgs::image_encodings::BGR8);
-            
-            cv::Mat image = cv_ptr->image;
+            cv::Mat image = hexapod_vision::imageToMat(msg);
             std::vector<Detection> detections;
             
             // 执行检测
@@ -111,9 +109,8 @@ private:
             cv::Mat result = image.clone();
             drawDetections(result, detections);
             
-            // 发布结果图像
             sensor_msgs::msg::Image::SharedPtr result_msg = 
-                cv_bridge::CvImage(msg->header, "bgr8", result).toImageMsg();
+                hexapod_vision::matToImage(result, msg->header);
             result_pub_.publish(result_msg);
             
             // 发布检测信息
@@ -124,8 +121,8 @@ private:
                 detection_pub_->publish(msg_str);
             }
             
-        } catch (cv_bridge::Exception& e) {
-            RCLCPP_ERROR(this->get_logger(), "cv_bridge异常: %s", e.what());
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "图像处理异常: %s", e.what());
         }
     }
     

@@ -88,7 +88,7 @@ private:
         int num_readings = (msg.angle_max - msg.angle_min) / msg.angle_increment;
         msg.ranges.resize(num_readings);
         
-        for (size_t i = 0; i < num_readings; ++i) {
+        for (int i = 0; i < num_readings; ++i) {
             float angle = msg.angle_min + i * msg.angle_increment;
             // 模拟简单的圆形障碍物
             float range = 2.0 + 0.5 * sin(angle * 3.0);

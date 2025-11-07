@@ -7,12 +7,13 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include "hexapod_vision/image_converter.hpp"
 #include <image_transport/image_transport.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <memory>
+#include <cstring>
 
 class VisionNode : public rclcpp::Node
 {
@@ -50,11 +51,7 @@ private:
     void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr& msg)
     {
         try {
-            // 转换为OpenCV格式
-            cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(
-                msg, sensor_msgs::image_encodings::BGR8);
-            
-            cv::Mat image = cv_ptr->image;
+            cv::Mat image = hexapod_vision::imageToMat(msg);
             cv::Mat processed = image.clone();
             
             // 图像预处理
@@ -78,9 +75,8 @@ private:
                 cv::rectangle(processed, rect, cv::Scalar(0, 255, 0), 2);
             }
             
-            // 发布处理后的图像
             sensor_msgs::msg::Image::SharedPtr processed_msg = 
-                cv_bridge::CvImage(msg->header, "bgr8", processed).toImageMsg();
+                hexapod_vision::matToImage(processed, msg->header);
             processed_pub_.publish(processed_msg);
             
             // 发布检测结果
@@ -90,8 +86,8 @@ private:
                 detection_pub_->publish(detection_msg);
             }
             
-        } catch (cv_bridge::Exception& e) {
-            RCLCPP_ERROR(this->get_logger(), "cv_bridge异常: %s", e.what());
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "图像处理异常: %s", e.what());
         }
     }
     

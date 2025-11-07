@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-本项目是一个基于Arduino和ROS2的蜘蛛型多足机器人系统，设计用于在复杂丘陵雨林地形中执行农作物采摘、收集、监测和灌溉任务。
+本项目是一个基于Arduino和ROS2的蜘蛛型多足机器人系统，设计用于在复杂丘陵雨林地形中执行山核桃病害监测和图像识别任务。
 
 ## 核心特性
 
@@ -68,12 +68,10 @@ projetct1/
 │   │   ├── src/
 │   │   │   ├── vision_node.cpp      # 视觉处理节点
 │   │   │   └── object_detector.cpp  # 目标检测节点
-│   ├── hexapod_agriculture/     # 农业任务模块
+│   ├── hexapod_agriculture/     # 农业监测任务模块
 │   │   ├── src/
 │   │   │   ├── agriculture_node.cpp  # 农业任务协调节点
-│   │   │   ├── harvest_node.cpp      # 采摘任务节点
-│   │   │   ├── monitor_node.cpp      # 监测任务节点
-│   │   │   └── irrigate_node.cpp     # 灌溉任务节点
+│   │   │   └── monitor_node.cpp      # 山核桃病害监测节点
 │   └── hexapod_perception/      # 环境感知模块
 │       └── src/
 │           └── perception_node.cpp   # 环境感知节点

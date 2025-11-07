@@ -3,7 +3,7 @@
 <package format="3">
   <name>hexapod_agriculture</name>
   <version>0.1.0</version>
-  <description>农业任务执行模块，包括采摘、监测、灌溉等功能</description>
+  <description>农业监测任务模块，用于山核桃病害监测和图像识别</description>
   <maintainer email="developer@example.com">Developer</maintainer>
   <license>MIT</license>
 

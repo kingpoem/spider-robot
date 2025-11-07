@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="hexapod_robot">
+  
+  <xacro:macro name="hexapod_ros2_control">
+    
+    <ros2_control name="GazeboSystem" type="system">
+      <hardware>
+        <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+      </hardware>
+      
+      <!-- 为所有关节添加控制器 -->
+      <xacro:macro name="leg_joints" params="leg_id">
+        <!-- Coxa关节 -->
+        <joint name="coxa_${leg_id}_joint">
+          <command_interface name="position">
+            <param name="min">-1.57</param>
+            <param name="max">1.57</param>
+          </command_interface>
+          <state_interface name="position">
+            <param name="initial_value">0.0</param>
+          </state_interface>
+          <state_interface name="velocity"/>
+        </joint>
+        
+        <!-- Femur关节 -->
+        <joint name="femur_${leg_id}_joint">
+          <command_interface name="position">
+            <param name="min">-2.0</param>
+            <param name="max">2.0</param>
+          </command_interface>
+          <state_interface name="position">
+            <param name="initial_value">0.0</param>
+          </state_interface>
+          <state_interface name="velocity"/>
+        </joint>
+        
+        <!-- Tibia关节 -->
+        <joint name="tibia_${leg_id}_joint">
+          <command_interface name="position">
+            <param name="min">-2.5</param>
+            <param name="max">0.5</param>
+          </command_interface>
+          <state_interface name="position">
+            <param name="initial_value">-0.5</param>
+          </state_interface>
+          <state_interface name="velocity"/>
+        </joint>
+      </xacro:macro>
+      
+      <!-- 为所有6条腿添加关节 -->
+      <xacro:leg_joints leg_id="1"/>
+      <xacro:leg_joints leg_id="2"/>
+      <xacro:leg_joints leg_id="3"/>
+      <xacro:leg_joints leg_id="4"/>
+      <xacro:leg_joints leg_id="5"/>
+      <xacro:leg_joints leg_id="6"/>
+      
+    </ros2_control>
+    
+  </xacro:macro>
+  
+</robot>
+

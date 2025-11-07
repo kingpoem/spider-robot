@@ -13,7 +13,6 @@ find_package(sensor_msgs REQUIRED)
 
 include_directories(include)
 
-# 农业任务执行节点
 add_executable(agriculture_node src/agriculture_node.cpp)
 ament_target_dependencies(agriculture_node
   rclcpp
@@ -22,15 +21,6 @@ ament_target_dependencies(agriculture_node
   sensor_msgs
 )
 
-# 采摘任务节点
-add_executable(harvest_node src/harvest_node.cpp)
-ament_target_dependencies(harvest_node
-  rclcpp
-  geometry_msgs
-  std_msgs
-)
-
-# 监测任务节点
 add_executable(monitor_node src/monitor_node.cpp)
 ament_target_dependencies(monitor_node
   rclcpp
@@ -39,15 +29,7 @@ ament_target_dependencies(monitor_node
   sensor_msgs
 )
 
-# 灌溉任务节点
-add_executable(irrigate_node src/irrigate_node.cpp)
-ament_target_dependencies(irrigate_node
-  rclcpp
-  geometry_msgs
-  std_msgs
-)
-
-install(TARGETS agriculture_node harvest_node monitor_node irrigate_node
+install(TARGETS agriculture_node monitor_node
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_include_directories(include)

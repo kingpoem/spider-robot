@@ -11,11 +11,17 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
-find_package(OpenCV REQUIRED)
 
-# 包含目录
+if(DEFINED ENV{CONDA_PREFIX})
+    set(OpenCV_DIR "$ENV{CONDA_PREFIX}/lib/cmake/opencv4")
+    list(APPEND CMAKE_PREFIX_PATH "$ENV{CONDA_PREFIX}")
+endif()
+find_package(OpenCV QUIET)
+if(NOT OpenCV_FOUND)
+    find_package(OpenCV REQUIRED)
+endif()
+
 include_directories(include)
 
 # 添加可执行文件
@@ -25,7 +31,6 @@ ament_target_dependencies(vision_node
   sensor_msgs
   geometry_msgs
   std_msgs
-  cv_bridge
   image_transport
 )
 target_link_libraries(vision_node ${OpenCV_LIBS} curl)
@@ -37,7 +42,6 @@ ament_target_dependencies(object_detector
   sensor_msgs
   geometry_msgs
   std_msgs
-  cv_bridge
   image_transport
 )
 target_link_libraries(object_detector ${OpenCV_LIBS} curl)
@@ -53,7 +57,6 @@ ament_export_dependencies(
   sensor_msgs
   geometry_msgs
   std_msgs
-  cv_bridge
   image_transport
   OpenCV
 )

@@ -24,10 +24,18 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(cv_bridge REQUIRED)
-find_package(OpenCV REQUIRED)
+
+if(DEFINED ENV{CONDA_PREFIX})
+    set(OpenCV_DIR "$ENV{CONDA_PREFIX}/lib/cmake/opencv4")
+    list(APPEND CMAKE_PREFIX_PATH "$ENV{CONDA_PREFIX}")
+endif()
+find_package(OpenCV QUIET)
+if(NOT OpenCV_FOUND)
+    find_package(OpenCV REQUIRED)
+endif()
 
 include_directories(include)
+include_directories(../hexapod_vision/include)
 
 # 环境感知节点
 # 注意：如果使用conda环境，CMake可能会警告库路径冲突（libcurl.so.4）
@@ -43,7 +51,6 @@ ament_target_dependencies(perception_node
   nav_msgs
   geometry_msgs
   std_msgs
-  cv_bridge
 )
 target_include_directories(perception_node PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(perception_node ${OpenCV_LIBS})
@@ -84,7 +91,6 @@ ament_export_dependencies(
   nav_msgs
   geometry_msgs
   std_msgs
-  cv_bridge
 )
 
 ament_package()
