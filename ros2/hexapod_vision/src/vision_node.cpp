@@ -8,6 +8,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/string.hpp>
 #include "hexapod_vision/image_converter.hpp"
+#include "hexapod_vision/vit_disease_detector.hpp"
 #include <image_transport/image_transport.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -25,6 +26,8 @@ public:
         this->declare_parameter("output_topic", "vision/processed_image");
         this->declare_parameter("enable_edge_detection", true);
         this->declare_parameter("enable_color_segmentation", true);
+        this->declare_parameter("enable_disease_detection", true);
+        this->declare_parameter("vit_model_path", "");
         
         std::string camera_topic = this->get_parameter("camera_topic").as_string();
         
@@ -43,6 +46,20 @@ public:
         // 发布检测结果
         detection_pub_ = this->create_publisher<std_msgs::msg::String>(
             "vision/detections", 10);
+        
+        // 发布病害检测结果
+        disease_detection_pub_ = this->create_publisher<std_msgs::msg::String>(
+            "vision/disease_detections", 10);
+        
+        // 初始化ViT病害检测器
+        if (this->get_parameter("enable_disease_detection").as_bool()) {
+            std::string model_path = this->get_parameter("vit_model_path").as_string();
+            if (vit_detector_.initialize(model_path)) {
+                RCLCPP_INFO(this->get_logger(), "ViT病害检测器已初始化");
+            } else {
+                RCLCPP_WARN(this->get_logger(), "ViT病害检测器初始化失败");
+            }
+        }
         
         RCLCPP_INFO(this->get_logger(), "视觉节点已启动");
     }
@@ -73,6 +90,34 @@ private:
             // 在图像上绘制检测结果
             for (const auto& rect : detections) {
                 cv::rectangle(processed, rect, cv::Scalar(0, 255, 0), 2);
+            }
+            
+            // ViT病害检测
+            if (this->get_parameter("enable_disease_detection").as_bool()) {
+                std::vector<hexapod_vision::DiseaseDetection> disease_detections = 
+                    vit_detector_.detect(image);
+                
+                // 在图像上绘制病害检测结果
+                for (const auto& disease : disease_detections) {
+                    cv::rectangle(processed, disease.bbox, cv::Scalar(0, 0, 255), 3);
+                    std::string label = disease.label + ": " + 
+                                      std::to_string(int(disease.confidence * 100)) + "%";
+                    cv::putText(processed, label, 
+                               cv::Point(disease.bbox.x, disease.bbox.y - 10),
+                               cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 0, 255), 2);
+                }
+                
+                // 发布病害检测结果
+                if (!disease_detections.empty()) {
+                    auto disease_msg = std_msgs::msg::String();
+                    std::string disease_info = "检测到病害: ";
+                    for (const auto& disease : disease_detections) {
+                        disease_info += disease.label + "(" + 
+                                       std::to_string(int(disease.confidence * 100)) + "%) ";
+                    }
+                    disease_msg.data = disease_info;
+                    disease_detection_pub_->publish(disease_msg);
+                }
             }
             
             sensor_msgs::msg::Image::SharedPtr processed_msg = 
@@ -164,6 +209,8 @@ private:
     image_transport::Subscriber image_sub_;
     image_transport::Publisher processed_pub_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr detection_pub_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr disease_detection_pub_;
+    hexapod_vision::ViTDiseaseDetector vit_detector_;
 };
 
 int main(int argc, char * argv[])

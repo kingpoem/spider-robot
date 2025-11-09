@@ -25,7 +25,10 @@ endif()
 include_directories(include)
 
 # 添加可执行文件
-add_executable(vision_node src/vision_node.cpp)
+add_executable(vision_node 
+  src/vision_node.cpp
+  src/vit_disease_detector.cpp
+)
 ament_target_dependencies(vision_node
   rclcpp
   sensor_msgs
@@ -34,6 +37,10 @@ ament_target_dependencies(vision_node
   image_transport
 )
 target_link_libraries(vision_node ${OpenCV_LIBS} curl)
+target_include_directories(vision_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 
 # 添加目标识别节点
 add_executable(object_detector src/object_detector.cpp)

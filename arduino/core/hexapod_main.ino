@@ -8,7 +8,6 @@
 #include "../sensors/imu_sensor.h"
 #include "../sensors/force_sensor.h"
 #include "../gait/gait_engine.h"
-#include "fpga_interface.h"
 #include "ros2_interface.h"
 
 // 全局对象
@@ -16,7 +15,6 @@ LegController legController;
 IMUSensor imu;
 ForceSensor forceSensors[NUM_LEGS];
 GaitEngine gaitEngine;
-FPGAInterface fpga;
 ROS2Interface ros2;
 
 // 状态变量
@@ -40,8 +38,8 @@ void setup() {
   // 设置步态引擎的腿部控制器引用
   gaitEngine.setLegController(&legController);
   
-  // 初始化FPGA接口
-  fpga.init();
+  // 初始化步态引擎
+  gaitEngine.init();
   
   // 初始化ROS2接口
   ros2.init();
@@ -65,14 +63,18 @@ void loop() {
   // 从ROS2接收命令
   ros2.receiveCommands();
   
-  // 从FPGA获取步态计算结果
-  fpga.updateGait();
-  
   // 计算姿态控制
   computePostureControl();
   
+  // 生成步态命令（Portenta H7本地计算）
+  static float gaitPhase = 0.0;
+  gaitPhase += 0.01;  // 假设100Hz控制频率
+  if (gaitPhase >= 1.0) gaitPhase -= 1.0;
+  
+  GaitCommands gaitCommands = gaitEngine.generateGaitCommands(gaitPhase);
+  
   // 执行步态
-  executeGait();
+  legController.executeGait(gaitCommands);
   
   // 发送状态到ROS2
   ros2.publishStatus();
@@ -87,11 +89,6 @@ void loop() {
 void initHardware() {
   // 初始化I2C总线
   Wire.begin();
-  
-  // 初始化SPI总线（用于FPGA通信）
-  SPI.begin();
-  pinMode(FPGA_CS_PIN, OUTPUT);
-  digitalWrite(FPGA_CS_PIN, HIGH);
   
   // 初始化伺服电机控制引脚
   for (int i = 0; i < NUM_LEGS; i++) {
@@ -159,13 +156,7 @@ void computePostureControl() {
   gaitEngine.applyPostureAdjustment(adjustment);
 }
 
-void executeGait() {
-  // 从FPGA获取步态计算结果
-  GaitCommands gaitCommands = fpga.getGaitCommands();
-  
-  // 执行步态命令
-  legController.executeGait(gaitCommands);
-}
+// executeGait函数已移至主循环中，使用本地步态引擎计算
 
 void handleEmergencyStop() {
   // 停止所有运动
@@ -178,11 +169,46 @@ void handleEmergencyStop() {
 }
 
 void handleEnergyRecovery() {
-  // 检测下坡或脚步落地
+  // 基于IMU惯性感知启动能量回收
+  // 检测下坡、减速或脚步落地时的能量回收机会
+  Vector3D accel = robotState.linearAcceleration;
+  Vector3D angularVel = robotState.angularVelocity;
+  Orientation orient = robotState.orientation;
+  
+  // 计算下坡角度（俯仰角）
+  float pitchAngle = orient.pitch;
+  bool isDownhill = pitchAngle < -5.0;  // 下坡阈值：-5度
+  
+  // 检测减速（负加速度）
+  float deceleration = sqrt(accel.x * accel.x + accel.y * accel.y);
+  bool isDecelerating = deceleration > 2.0;  // 减速阈值：2 m/s²
+  
+  // 检测脚步落地时的冲击
   for (int i = 0; i < NUM_LEGS; i++) {
-    if (robotState.footContacts[i] && robotState.footForces[i].z > ENERGY_RECOVERY_THRESHOLD) {
-      // 激活能量回收
-      fpga.enableEnergyRecovery(i);
+    bool shouldRecover = false;
+    
+    // 条件1：下坡且脚接触地面
+    if (isDownhill && robotState.footContacts[i]) {
+      shouldRecover = true;
+    }
+    
+    // 条件2：减速且脚接触地面且有足够力
+    if (isDecelerating && robotState.footContacts[i] && 
+        robotState.footForces[i].magnitude() > ENERGY_RECOVERY_THRESHOLD) {
+      shouldRecover = true;
+    }
+    
+    // 条件3：脚落地时的垂直冲击（负Z加速度）
+    if (accel.z < -3.0 && robotState.footContacts[i]) {
+      shouldRecover = true;
+    }
+    
+    if (shouldRecover) {
+      // 激活该腿的能量回收
+      legController.enableEnergyRecovery(i);
+    } else {
+      // 关闭能量回收
+      legController.disableEnergyRecovery(i);
     }
   }
 }

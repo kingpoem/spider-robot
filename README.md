@@ -27,9 +27,6 @@
 │  Arduino 核心   │  (实时控制, 传感器读取)
 └────────┬────────┘
          │
-┌────────▼────────┐
-│   FPGA 协处理器 │  (高频率步态计算, 传感器融合)
-└────────┬────────┘
          │
 ┌────────▼────────┐
 │   硬件驱动层    │  (伺服电机, 传感器, 执行器)
@@ -44,7 +41,6 @@ projetct1/
 │   ├── core/                   # 核心控制逻辑
 │   │   ├── hexapod_main.ino    # 主程序
 │   │   ├── config.h            # 配置定义
-│   │   ├── fpga_interface.*     # FPGA接口
 │   │   └── ros2_interface.*    # ROS2接口
 │   ├── drivers/                # 硬件驱动
 │   │   └── leg_controller.*    # 腿部控制器
@@ -75,9 +71,6 @@ projetct1/
 │   └── hexapod_perception/      # 环境感知模块
 │       └── src/
 │           └── perception_node.cpp   # 环境感知节点
-├── fpga/                        # FPGA代码
-│   ├── gait_calculator.v        # 步态计算模块
-│   └── README.md                # FPGA说明文档
 ├── config/                      # 配置文件
 │   ├── arduino_config.yaml
 │   └── ros2_config.yaml
@@ -90,8 +83,7 @@ projetct1/
 
 ## 硬件要求
 
-- **主控制器**: Arduino Mega 2560 或 Arduino Due
-- **协处理器**: FPGA开发板（推荐Xilinx或Altera）
+- **主控制器**: Arduino Portenta H7（双核ARM Cortex-M7/M4，480MHz/240MHz）
 - **伺服电机**: 6-8个高扭矩伺服电机（每个腿3个自由度）
 - **传感器**: 
   - IMU (MPU6050/BNO085)
@@ -99,8 +91,7 @@ projetct1/
   - LiDAR/深度摄像头 (每个腿)
   - 接触传感器
 - **通信**: 
-  - WiFi模块 (ESP32) 用于ROS2通信
-  - SPI/I2C 用于FPGA通信
+  - WiFi/蓝牙/以太网（Portenta H7内置）用于ROS2通信
 
 ## 软件依赖
 

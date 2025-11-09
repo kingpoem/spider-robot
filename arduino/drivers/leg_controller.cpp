@@ -5,7 +5,11 @@ LegController::LegController() {
   for (int i = 0; i < NUM_LEGS; i++) {
     for (int j = 0; j < JOINTS_PER_LEG; j++) {
       currentAngles[i][j] = 0;
+      lastJointVelocities[i][j] = 0;
     }
+    energyRecoveryEnabled[i] = false;
+    recoveredEnergy[i] = 0.0;
+    lastUpdateTime[i] = 0;
   }
 }
 
@@ -48,6 +52,15 @@ void LegController::executeGait(GaitCommands commands) {
   for (int i = 0; i < NUM_LEGS; i++) {
     for (int j = 0; j < JOINTS_PER_LEG; j++) {
       setServoAngle(i, j, commands.targetAngles[i][j]);
+      
+      // 更新关节速度（用于能量回收计算）
+      float dt = 0.01;  // 假设100Hz控制频率
+      lastJointVelocities[i][j] = (commands.targetAngles[i][j] - currentAngles[i][j]) / dt;
+    }
+    
+    // 处理能量回收
+    if (energyRecoveryEnabled[i]) {
+      processEnergyRecovery(i);
     }
   }
 }
@@ -168,5 +181,72 @@ bool LegController::inverseKinematics(int legIndex, Vector3D targetPosition, flo
   }
   
   return true;
+}
+
+// 能量回收功能实现
+void LegController::enableEnergyRecovery(int legIndex) {
+  if (legIndex >= 0 && legIndex < NUM_LEGS) {
+    energyRecoveryEnabled[legIndex] = true;
+    lastUpdateTime[legIndex] = millis();
+  }
+}
+
+void LegController::disableEnergyRecovery(int legIndex) {
+  if (legIndex >= 0 && legIndex < NUM_LEGS) {
+    energyRecoveryEnabled[legIndex] = false;
+  }
+}
+
+float LegController::getRecoveredEnergy(int legIndex) {
+  if (legIndex >= 0 && legIndex < NUM_LEGS) {
+    return recoveredEnergy[legIndex];
+  }
+  return 0.0;
+}
+
+float LegController::getTotalRecoveredEnergy() {
+  float total = 0.0;
+  for (int i = 0; i < NUM_LEGS; i++) {
+    total += recoveredEnergy[i];
+  }
+  return total;
+}
+
+void LegController::processEnergyRecovery(int legIndex) {
+  if (legIndex < 0 || legIndex >= NUM_LEGS) return;
+  
+  unsigned long currentTime = millis();
+  unsigned long dt = currentTime - lastUpdateTime[legIndex];
+  
+  if (dt == 0) return;  // 避免除零
+  
+  float dt_sec = dt / 1000.0;  // 转换为秒
+  
+  // 计算每条腿的总动能（基于关节速度）
+  // 简化模型：假设每个关节有等效转动惯量
+  const float jointInertia = 0.01;  // 关节等效转动惯量 (kg·m²)
+  const float energyRecoveryEfficiency = 0.3;  // 能量回收效率（30%）
+  
+  float totalKineticEnergy = 0.0;
+  
+  for (int j = 0; j < JOINTS_PER_LEG; j++) {
+    // 将角度速度转换为弧度/秒
+    float angularVelocityRad = radians(lastJointVelocities[legIndex][j]);
+    
+    // 计算动能: E = 0.5 * I * ω²
+    float kineticEnergy = 0.5 * jointInertia * angularVelocityRad * angularVelocityRad;
+    totalKineticEnergy += kineticEnergy;
+  }
+  
+  // 计算可回收的能量（考虑效率）
+  float recoverableEnergy = totalKineticEnergy * energyRecoveryEfficiency * dt_sec;
+  
+  // 累加回收的能量
+  recoveredEnergy[legIndex] += recoverableEnergy;
+  
+  // 在实际硬件中，这里会将能量存储到电池或超级电容中
+  // 对于Portenta H7，可以通过ADC读取能量回收模块的电压/电流
+  
+  lastUpdateTime[legIndex] = currentTime;
 }
 

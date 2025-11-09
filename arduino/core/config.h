@@ -26,9 +26,16 @@ const int SERVO_PINS[NUM_LEGS][JOINTS_PER_LEG] = {
 const int CLAW_PINS[NUM_LEGS] = {28, 29, 30, 31, 32, 33};
 const int NAIL_PINS[NUM_LEGS] = {34, 35, 36, 37, 38, 39};
 
-// FPGA通信引脚
-#define FPGA_CS_PIN 53
-#define FPGA_IRQ_PIN 52
+// Portenta H7配置
+// Portenta H7使用双核ARM Cortex-M7和M4
+// - M7核心：主控制循环、步态计算、传感器处理
+// - M4核心：实时任务、通信处理
+// 步态计算在M7核心本地完成，无需FPGA协处理器
+// Portenta H7特性：
+// - 480MHz ARM Cortex-M7 + 240MHz ARM Cortex-M4
+// - 8MB SDRAM, 16MB QSPI Flash
+// - 支持WiFi、蓝牙、以太网
+// - 多个ADC通道用于能量回收监测
 
 // IMU引脚
 #define IMU_SDA_PIN 20

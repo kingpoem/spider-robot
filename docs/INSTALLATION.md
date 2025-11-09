@@ -3,30 +3,29 @@
 ## 硬件准备
 
 ### 必需硬件
-- Arduino Mega 2560 或 Arduino Due
-- FPGA开发板（推荐Xilinx Zynq或Altera Cyclone）
+- Arduino Portenta H7（双核ARM Cortex-M7/M4，480MHz/240MHz）
 - 6-8个高扭矩伺服电机（每个腿3个自由度）
 - IMU传感器（MPU6050或BNO085）
 - 力传感器（每个足端）
 - LiDAR或深度摄像头（每个腿）
-- WiFi模块（ESP32）
 - 电源管理系统
 
 ### 可选硬件
 - 深度摄像头（Intel RealSense或类似）
 - 激光雷达（RPLIDAR或类似）
 - 额外传感器（温度、湿度等）
+- 能量回收模块（用于足端能量回收）
 
 ## 软件安装
 
 ### 1. Arduino IDE设置
 
-1. 下载并安装 [Arduino IDE](https://www.arduino.cc/en/software)
-2. 安装必要的库：
+1. 下载并安装 [Arduino IDE](https://www.arduino.cc/en/software) 或 PlatformIO
+2. 安装Arduino Portenta H7开发板支持
+3. 安装必要的库：
    - Servo库（内置）
    - Wire库（内置）
-   - SPI库（内置）
-   - WiFi库（如果使用ESP32）
+   - WiFi库（Portenta H7内置支持）
 
 ### 2. ROS2安装
 
@@ -72,11 +71,12 @@ source install/setup.bash
 
 1. 打开 `arduino/core/hexapod_main.ino`
 2. 根据硬件配置修改 `arduino/core/config.h` 中的引脚定义
-3. 配置WiFi信息（在 `ros2_interface.cpp` 中）：
+3. 配置WiFi信息（在 `ros2_interface.h` 中）：
    ```cpp
    const char* ssid = "YOUR_WIFI_SSID";
    const char* password = "YOUR_WIFI_PASSWORD";
    ```
+4. 注意：Portenta H7使用双核架构，步态计算在M7核心本地完成
 
 ### ROS2配置
 

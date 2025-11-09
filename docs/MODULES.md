@@ -9,7 +9,6 @@
 1. **视觉识别模块** (`hexapod_vision`)
 2. **农业任务模块** (`hexapod_agriculture`)
 3. **环境感知模块** (`hexapod_perception`)
-4. **FPGA代码模块** (`fpga/`)
 
 ## 1. 视觉识别模块 (hexapod_vision)
 
@@ -154,44 +153,6 @@ ros2 run hexapod_agriculture irrigate_node
 ros2 run hexapod_perception perception_node
 ```
 
-## 4. FPGA代码模块
-
-### 功能概述
-FPGA协处理器代码，实现高频率步态计算和传感器数据融合。
-
-### 文件说明
-
-#### gait_calculator.v
-- **功能**: Verilog实现的步态计算模块
-  - 实时计算6条腿的关节角度（1000Hz）
-  - 传感器数据融合（IMU、力传感器）
-  - 能量回收控制
-  - SPI通信接口（与Arduino通信）
-
-### 接口说明
-
-**输入信号**:
-- 系统时钟和复位
-- SPI接口（CS、CLK、MOSI）
-- IMU传感器数据
-- 6个力传感器数据
-
-**输出信号**:
-- SPI接口（MISO）
-- 18个关节角度（6条腿 x 3关节）
-- 18个关节速度
-- 能量回收使能信号
-
-### 编译方法
-
-```bash
-# 使用Vivado
-vivado -mode batch -source build.tcl
-
-# 或使用Quartus
-quartus_sh --flow compile gait_calculator
-```
-
 ## 系统集成
 
 ### 完整系统启动
@@ -225,7 +186,7 @@ ros2 launch hexapod_bringup full_system.launch.py
 
 ### 控制数据流
 ```
-任务规划 → 农业任务 → 导航节点 → 步态规划 → Arduino → FPGA → 执行器
+任务规划 → 农业任务 → 导航节点 → 步态规划 → Arduino (Portenta H7) → 执行器
 ```
 
 ## 配置参数
@@ -241,7 +202,7 @@ ros2 launch hexapod_bringup full_system.launch.py
 1. **深度学习集成**: 在目标检测节点中集成YOLO、SSD等模型
 2. **传感器融合**: 增强环境感知模块的多传感器融合算法
 3. **任务规划优化**: 实现更智能的任务调度和路径优化
-4. **FPGA优化**: 使用FPGA的DSP资源加速浮点运算
+4. **ViT模型优化**: 训练和优化ViT病害识别模型，提高识别准确率
 
 ## 故障排除
 
@@ -255,13 +216,9 @@ ros2 launch hexapod_bringup full_system.launch.py
    - 检查任务命令话题
    - 确认导航节点已启动
 
-3. **FPGA通信失败**
-   - 检查SPI连接
-   - 确认FPGA固件已烧录
-
 ## 参考文献
 
 - ROS2官方文档: https://docs.ros.org/
 - OpenCV文档: https://docs.opencv.org/
-- FPGA开发文档: 根据使用的FPGA型号查阅对应文档
+- Arduino Portenta H7文档: https://docs.arduino.cc/hardware/portenta-h7
 
